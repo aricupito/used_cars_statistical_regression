@@ -1,0 +1,231 @@
+---
+title: "Stats_proj"
+author: "HW_07"
+date: "2022-11-17"
+output: html_document
+---
+
+```{r}
+cars <- read.csv(file = "vehicles.csv")
+```
+
+```{r}
+cars %>% 
+  filter(cylinders != "") %>% 
+  filter(drive != "") %>% 
+  filter(paint_color != "") %>% 
+  filter(type != "") %>% 
+  filter(fuel != "") %>% 
+  filter(title_status != "") %>% 
+  filter(condition != "") %>% 
+  filter(!is.na(year)) %>% 
+  filter(price != "0") %>% 
+  filter(transmission != "other") %>% 
+  filter(type != "other") %>% 
+  filter(manufacturer != "") -> cars_1
+```
+
+```{r}
+cars_1 %>% 
+  rename(fuel_type = fuel,
+         total_miles = odometer,
+         drivetrain = drive) -> cars_1
+```
+
+```{r}
+cars_1 %>% 
+  select(id, price, year, manufacturer, condition, cylinders, fuel_type, total_miles, transmission, drivetrain, type, state, posting_date, paint_color) -> cars_2
+```
+
+```{r}
+cars_2 %>% 
+  filter(type == "sedan") %>% 
+  filter(state == "md" | state == "dc" | state == "va") -> cars_3
+```
+
+```{r}
+cars_3 %>% 
+  filter(cylinders != "other" | fuel_type != "other") %>% 
+  mutate(age = 2021 - year,
+         inflation = price * 1.12) %>% 
+  select(-price, -year, -posting_date) %>% 
+  rename(price = inflation) %>% 
+  relocate(price, .after = id) %>% 
+  relocate(age, .after = price) %>% 
+  relocate(total_miles, .after = age) %>% 
+  relocate(condition, .after = total_miles) %>% 
+  relocate(state, .after = condition) %>% 
+  relocate(manufacturer, .after = condition) %>% 
+  relocate(fuel_type, .after = manufacturer) %>% 
+  relocate(cylinders, .after = fuel_type) %>% 
+  relocate(drivetrain, .after = cylinders) -> cars_4
+```
+
+```{r}
+cars_4 %>% 
+  filter(state == "dc") -> cars_5
+```
+
+```{r}
+write.csv(cars_5,"cars_final_data.csv")
+```
+
+```{r}
+cars_5 %>% 
+  distinct(manufacturer)
+```
+
+```{r}
+continent = function(manufacturer){
+  if(manufacturer == "acura" | manufacturer == "chevrolet" | manufacturer == "ford" | manufacturer == "lincoln" | manufacturer == "buick" | manufacturer == "saturn" | manufacturer == "dodge" | manufacturer == "pontiac"){
+    return("NorthAmerica")
+  }else if(manufacturer == "mazda" | manufacturer == "nissan" | manufacturer == "toyota" | manufacturer == "infiniti" | manufacturer == "lexus" | manufacturer == "honda" | manufacturer == "honda" | manufacturer == "kia" | manufacturer == "subaru" | manufacturer == "hyundai"){
+    return("Asia")
+  }else if(manufacturer == "bmw" | manufacturer == "volkswagen" | manufacturer == "audi" | manufacturer == "mercedes-benz" | manufacturer == "volvo" | manufacturer == "jaguar"){
+    return("Europe")
+  }else{
+    return("error")
+  }
+}
+
+cars_5 %>% 
+  group_by(manufacturer) %>% 
+  mutate(continent = continent(manufacturer))
+```
+
+```{r}
+continent = function(manufacturer){
+  switch(manufacturer,
+         "acura" = "NorthAmerica",
+         "chevrolet" = "NorthAmerica",
+         "ford" = "NorthAmerica",
+         "lincoln" = "NorthAmerica",
+         "buick" = "NorthAmerica",
+         "saturn" = "NorthAmerica",
+         "dodge" = "NorthAmerica",
+         "pontiac" = "NorthAmerica"
+         )
+}
+
+cars_5 %>% 
+  mutate(NorthAmerica = continent(manufacturer))
+```
+
+```{r}
+model <- lm(price ~ age + total_miles + condition + manufacturer + fuel_type + cylinders + drivetrain + transmission + paint_color, data = cars_5)
+summary(model)
+```
+
+```{r}
+model <- lm(log(price) ~ age + total_miles + manufacturer, data = cars_5)
+summary(model)
+```
+
+```{r}
+model <- lm(price ~ age + total_miles + manufacturer, data = cars_5)
+summary(model)
+```
+
+```{r}
+cars_5 %>% 
+  count(manufacturer) %>% 
+  arrange(-n)
+```
+
+scatter of 5 most pop price vs age
+```{r}
+ggplot(data = pop_5, mapping = aes(x = age, y = price)) +
+      geom_point(mapping = aes(color = manufacturer)) +
+      geom_smooth(se = FALSE, method = lm) +
+  ylab("price ($)") +
+  xlab("age (years)") +
+  ggtitle("Top 5 Car Brands Age vs Price")
+```
+
+scatter of 5 most pop price vs miles driven
+```{r}
+ggplot(data = pop_5, mapping = aes(x = total_miles, y = price)) +
+      geom_point(mapping = aes(color = manufacturer)) +
+      geom_smooth(se = FALSE, method = lm) +
+  ylab("price ($)") +
+  xlab("miles driven") +
+  ggtitle("Top 5 Car Brands Age vs Miles Driven")
+```
+
+Linear Model for 5 most popular cars:
+```{r}
+cars_5 %>% 
+  filter(manufacturer == "nissan" | manufacturer == "toyota" | manufacturer == "honda" | manufacturer == "bmw" | manufacturer == "ford") -> pop_5
+
+model <- lm(price ~ age + total_miles + manufacturer, data = pop_5)
+summary(model)
+```
+
+```{r}
+pop_5
+```
+
+Linear Model for Asian cars:
+```{r}
+cars_5 %>% 
+  filter(manufacturer == "mazda" | manufacturer == "nissan" | manufacturer == "toyota" | manufacturer == "infiniti" | manufacturer == "lexus" | manufacturer == "honda" | manufacturer == "honda" | manufacturer == "kia" | manufacturer == "subaru" | manufacturer == "hyundai") -> tmpdf
+
+model <- lm(price ~ age + total_miles + manufacturer, data = tmpdf)
+summary(model)
+```
+
+Linear Model for American cars:
+```{r}
+cars_5 %>% 
+  filter(manufacturer == "acura" | manufacturer == "caddilac" | manufacturer == "chevrolet" | manufacturer == "ford" | manufacturer == "lincoln" | manufacturer == "buick" | manufacturer == "saturn" | manufacturer == "dodge" | manufacturer == "pontiac") -> tmpdf
+
+model <- lm(price ~ age + total_miles + manufacturer, data = tmpdf)
+summary(model)
+```
+
+Linear Model for European cars:
+```{r}
+cars_5 %>% 
+  filter(manufacturer == "bmw" | manufacturer == "volkswagen" | manufacturer == "audi" | manufacturer == "mercedes-benz" | manufacturer == "volvo" | manufacturer == "jaguar") -> tmpdf
+
+model <- lm(price ~ age + total_miles + manufacturer, data = tmpdf)
+summary(model)
+```
+
+Linear Model for Luxury cars:
+```{r}
+cars_5 %>% 
+  filter(manufacturer == "bmw" | manufacturer == "cadillac" | manufacturer == "audi" | manufacturer == "mercedes-benz" | manufacturer == "volvo" | manufacturer == "jaguar" | manufacturer == "lincoln" | manufacturer == "lexus") -> tmpdf
+
+model <- lm(price ~ age + total_miles + manufacturer, data = tmpdf)
+summary(model)
+```
+
+```{r}
+ggplot(data = cars_5, mapping = aes(x = age, y = log(price))) +
+      geom_point() +
+      geom_smooth(se = FALSE, method = lm)
+```
+
+```{r}
+cars_5 %>% 
+ggplot(mapping = aes(x = total_miles, y = price)) +
+      geom_point(mapping = aes(color = manufacturer)) +
+      geom_smooth(se = FALSE, method = lm)
+```
+
+```{r}
+cars_5 %>% 
+  filter(price < 50000) %>% 
+  ggplot(mapping = aes(fill = manufacturer, x = price)) +
+      geom_histogram() 
+```
+
+```{r}
+cars_5 %>% 
+  filter(price < 50000) %>% 
+  ggplot(aes(x = as.factor(manufacturer), y = price)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 75))
+```
+
